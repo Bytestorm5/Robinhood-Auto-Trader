@@ -23,7 +23,7 @@ The stock pool page shows every symbol that algorithm is actively trading on, as
 You can also click on any symbol here to go to its individual stock page.
 
 ## Parameters
-The Parameters page lets you change parameters and then immediately test them on the past year's data. See PARAMS.md for details on the different parameters and what they mean.
+The Parameters page lets you change parameters and then immediately test them on the past year's data. See [PARAMS.md](PARAMS.md) for details on the different parameters and what they mean.
 
 Important note, the ROI of the algorithm over the past year isn't guaranteed or even necessarily likely to hold for the next year. You should only use the ROI metrics in comparison to other configurations. 
 

@@ -60,8 +60,4 @@ MIN_PROFIT_RATIO="1.2"
 STOCK_POOL="NVDA AMD TSM GOOG MSFT"
 ```
 
-The Stock Pool defines the stocks that the algorithm will actively trade. There is a tradeoff between returns and stability to keep in mind when deciding. 
-
-Fewer stocks will generally yield higher returns but tends to be more risky, while having a broad range of stocks will give you some stability at the cost of lower overall returns.
-
-Be wary of simply picking stocks that had the best performance in the past year- that performance isn't guaranteed to continue, especially so if that performance manifests as a large spike in price rather than a gradual one.
+The Stock Pool defines the stocks that the algorithm will actively trade. All symbols must be separated with a single space. Putting any other characters will cause an error.
