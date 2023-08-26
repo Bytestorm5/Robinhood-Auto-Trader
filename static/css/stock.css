@@ -1,0 +1,13 @@
+.stock-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.centered-graph {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+    width: 800px;
+}

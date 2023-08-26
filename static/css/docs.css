@@ -1,0 +1,9 @@
+body {
+    background-color: rgb(223, 223, 223);
+}
+.docs-content {
+    background-color: whitesmoke;
+    display: flex;
+    flex-direction: column;
+    width: 65%;
+}

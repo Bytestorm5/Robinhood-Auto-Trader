@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{{ import_style('stock.css') }}
+{% endblock %}
+
+{% block content %}
+<div class="stock-dashboard">
+    <div style="width: 80%; max-height: 500px; margin: auto;">
+        <canvas id="stock-value-graph" class="centered-graph">       
+        </canvas>
+        <script>
+            var ctx = document.getElementById('stock-value-graph');
+            
+            values = {{ values | safe }}
+            dates = {{ labels | safe }}
+    
+            new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: dates,
+                datasets: [{
+                  label: 'Stock Value',
+                  data: values,
+                  borderWidth: 1,
+                  pointRadius: {{ radii | safe }},
+                  pointBackgroundColor: {{ bgs | safe }},
+                  pointBorderWidth: 0
+                }],
+                options: {
+                    plugins: {
+                        title: {
+                            title: {
+                                display: true,
+                                text: 'Stock Price Graph'
+                            }
+                        }
+                    }
+                }
+              }
+            });
+          </script>
+    </div>
+    <div style="width: 80%; max-height: 500px; margin: auto;">
+        <canvas id="entry-macd-graph" class="centered-graph">       
+        </canvas>
+        <script>
+            var ctx = document.getElementById('entry-macd-graph');
+            
+            entry_macd = {{ entry_macd | safe }}
+            entry_signal = {{ entry_signal | safe }}
+            entry_hist = {{ entry_hist | safe }}
+            dates = {{ labels | safe }}
+    
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'MACD',
+                        data: entry_macd,
+                        borderWidth: 1,
+                        pointRadius: {{ radii | safe }},
+                        pointBackgroundColor: {{ bgs | safe }},
+                        pointBorderWidth: 0,
+                        type: 'line'
+                    },
+                    {
+                        label: 'Signal',
+                        data: entry_signal,
+                        borderWidth: 1,
+                        type: 'line',
+                        radius: 0
+                    },
+                    {
+                        label: 'Histogram',
+                        data: entry_hist,
+                        borderWidth: 1,
+                    }
+                ],
+                options: {
+                    plugins: {
+                        title: {
+                            title: {
+                                display: true,
+                                text: 'Entry MACD Graph'
+                            }
+                        }
+                    }
+                }
+              }
+            });
+          </script>
+    </div>
+    <div style="width: 80%; max-height: 500px; margin: auto;">
+        <canvas id="exit-macd-graph" class="centered-graph">       
+        </canvas>
+        <script>
+            var ctx = document.getElementById('exit-macd-graph');
+            
+            exit_macd = {{ exit_macd | safe }}
+            exit_signal = {{ exit_signal | safe }}
+            exit_hist = {{ exit_hist | safe }}
+            dates = {{ labels | safe }}
+    
+            new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: 'MACD',
+                        data: exit_macd,
+                        borderWidth: 1,
+                        pointRadius: {{ radii | safe }},
+                        pointBackgroundColor: {{ bgs | safe }},
+                        pointBorderWidth: 0,
+                        type: 'line'
+                    },
+                    {
+                        label: 'Signal',
+                        data: exit_signal,
+                        borderWidth: 1,
+                        type: 'line',
+                        radius: 0
+                    },
+                    {
+                        label: 'Histogram',
+                        data: exit_hist,
+                        borderWidth: 1,
+                    }
+                ],
+                options: {
+                    plugins: {
+                        title: {
+                            title: {
+                                display: true,
+                                text: 'Exit MACD Graph'
+                            }
+                        }
+                    }
+                }
+              }
+            });
+          </script>
+    </div>
+</div>
+{% endblock %}

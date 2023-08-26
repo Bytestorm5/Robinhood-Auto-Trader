@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{{ import_style('pool.css') }}
+{% endblock %}
+
+{% block content %}
+<div class="stock-pool-content">
+  <h1>Stock Pool</h1>
+  <p>All stocks in the auto-trader's pool are listed below, with it's current preferred action. Note that the actions are only executed once each day near market close.</p>
+  <table class="pool-stock-list">
+    <tr>
+      <th class="td-symbol">Symbol</th>
+      <th class="td-number">Price</th>
+      <th class="td-number">Buy/Sell</th>
+      <th class="td-number">Confidence</th>
+    </tr>
+    {{ table_data | safe }}
+  </table>
+</div>
+{% endblock %}

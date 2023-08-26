@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {% macro import_style(filename) -%}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/' + filename) }}">
+    {%- endmacro %}
+
+    {{ import_style('base.css')}}
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>Stock Dashboard</title>
+    {% block header %}{% endblock %}
+</head>
+<body {% if dark_mode %}class="dark"{% endif %}>
+
+<nav class="navbar">
+    <a href="/">Home</a>
+    <a href="/stockPool">Stock Pool</a>
+    <a href="/params">Parameters</a>
+    <!-- Add more links as needed -->
+</nav>
+
+{% block content %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+
+{% block header %}
+{{ import_style('params.css') }}
+<script>
+  const params = {{ PARAMS | safe }}
+
+  document.addEventListener("DOMContentLoaded", () => {
+  // Loop through the JSON data
+  for (const key in params) {
+    if (params.hasOwnProperty(key)) {
+      // Get the form element by its id
+      const formElement = document.getElementById(key);
+
+      if (formElement) {
+        // Set the value of the form element
+        formElement.value = params[key];
+      }
+    }
+  }
+});
+
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="params-page">
+  <form action="/api/setParams" class="params-menu" method="post">
+    <div class="perf-metrics">
+      <p id="perf-data">Simulating with current params...</p>
+      <p id="disclaimer" style="font-size: small;">
+        Past year performance does not guarantee future performance. Past year performance should only be used to compare the efficacy of different strategies against each other. 
+      </p>
+    </div>
+    <hr style="margin-block: 5px;">
+    <div class="form-element">
+      <label class="label" for="integer">RSI Period:</label>
+      <input class="input-field integer-input" type="number" id="RSI_PERIOD" name="RSI_PERIOD">
+    </div>
+    <div style="margin-block: 48px;">
+      <div class="form-element">
+        <label class="label" for="integer">Entry MACD Short Period:</label>
+        <input class="input-field integer-input" type="number" id="ENTRY_MACD_SHORT_PERIOD" name="ENTRY_MACD_SHORT_PERIOD">
+      </div>
+      <div class="form-element">
+        <label class="label" for="integer">Entry MACD Long Period:</label>
+        <input class="input-field integer-input" type="number" id="ENTRY_MACD_LONG_PERIOD" name="ENTRY_MACD_LONG_PERIOD">
+      </div>
+      <div class="form-element">
+        <label class="label" for="integer">Entry MACD Signal Period:</label>
+        <input class="input-field integer-input" type="number" id="ENTRY_MACD_SIGNAL_PERIOD" name="ENTRY_MACD_SIGNAL_PERIOD">
+      </div>
+    </div>
+    <div style="margin-block: 48px;">
+      <div class="form-element">
+        <label class="label" for="integer">Exit MACD Short Period:</label>
+        <input class="input-field integer-input" type="number" id="EXIT_MACD_SHORT_PERIOD" name="EXIT_MACD_SHORT_PERIOD">
+      </div>
+      <div class="form-element">
+        <label class="label" for="integer">Exit MACD Long Period:</label>
+        <input class="input-field integer-input" type="number" id="EXIT_MACD_LONG_PERIOD" name="EXIT_MACD_LONG_PERIOD">
+      </div>
+      <div class="form-element">
+        <label class="label" for="integer">Exit MACD Signal Period:</label>
+        <input class="input-field integer-input" type="number" id="EXIT_MACD_SIGNAL_PERIOD" name="EXIT_MACD_SIGNAL_PERIOD">
+      </div>
+    </div>
+    <div class="form-element">
+      <label class="label" for="float">Minimum Funds:</label>
+      <input class="input-field float-input" type="number" step="1.0" id="MIN_FUNDS" name="MIN_FUNDS">
+    </div>
+    <div class="form-element">
+      <label class="label" for="float">Maximum Sell Proportion:</label>
+      <input class="input-field float-input" type="number" step="0.1" id="MAX_SELL_PROPORTION" name="MAX_SELL_PROPORTION">
+    </div>
+    <div class="form-element">
+      <label class="label" for="float">Maximum Profit Ratio:</label>
+      <input class="input-field float-input" type="number" step="0.1" id="MAX_PROFIT_RATIO" name="MAX_PROFIT_RATIO">
+    </div>
+    <div class="form-element">
+      <label class="label" for="float">Minimum Profit Ratio:</label>
+      <input class="input-field float-input" type="number" step="0.1" id="MIN_PROFIT_RATIO" name="MIN_PROFIT_RATIO">
+    </div>
+    <div class="form-element">
+      <label class="label" for="string">Stock Pool:</label>
+      <textarea class="input-field string-input" type="textarea" id="STOCK_POOL" name="STOCK_POOL">
+
+      </textarea>
+    </div>
+    <button class="submit-button" type="submit">Submit</button>
+  </form>
+  <div class="perf-graph">
+    <canvas id="total-value-graph">       
+    </canvas>
+    <script>
+        const ctx = document.getElementById('total-value-graph');
+        placeholder_chart = new Chart(ctx, {
+          type: 'line',
+          responsive: true,
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Simulating from Past Year data...',
+              data: [],
+              borderWidth: 1,
+              radius: 0
+            }]
+          }
+        });
+
+        var requestOptions = {
+          method: 'GET',
+          redirect: 'follow'
+        };
+
+        fetch("/api/simTrade", requestOptions)
+          .then(response => response.json())
+          .then(result => {
+            placeholder_chart.destroy()
+
+            values = result['values']
+            dates = result['times']
+
+            new Chart(ctx, {
+              type: 'line',
+              responsive: true,
+              data: {
+                labels: dates,
+                datasets: [{
+                  label: 'Total Value',
+                  data: values,
+                  borderWidth: 1,
+                  radius: 0
+                }]
+              }
+            });
+
+            document.getElementById('perf-data').innerHTML = `ROI from start: <b>${Math.round(10000 * values[values.length - 1] / values[0])/100}%</b><br>
+            Max ROI: <b>${Math.round(10000 * Math.max(...values) / values[0])/100}%</b><br>
+            Min ROI: <b>${Math.round(10000 * Math.min(...values) / values[0])/100}%</b>`
+
+          })
+          .catch(error => console.log('error', error));
+        
+      </script>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,12 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #f0f0f0;
+    padding: 10px 20px;
+    margin-right: 20px;
+    text-decoration: none;
+}
+body {
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
