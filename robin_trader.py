@@ -9,8 +9,8 @@ import pyotp
 
 PARAMS = {}
 
-def refresh_params(override=True):
-    load_dotenv(override)
+def refresh_params():
+    load_dotenv()
     PARAMS['RSI_PERIOD'] = int(os.environ.get('RSI_PERIOD', 8))
     
     PARAMS['ENTRY_MACD_SHORT_PERIOD'] = int(os.environ.get('ENTRY_MACD_SHORT_PERIOD', 12))

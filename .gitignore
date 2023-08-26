@@ -12,3 +12,4 @@ output
 venv/
 
 __pycache__/*
+logs/*

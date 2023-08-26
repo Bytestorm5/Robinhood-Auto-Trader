@@ -1,28 +1,47 @@
 import robin_stocks as r
-from robin_trader import *
+from dotenv import load_dotenv
 import sys
+from datetime import datetime
+
+load_dotenv()
+from robin_trader import *
+
+log_file = open(f"logs/output_log_{datetime.now().strftime('%d-%m-%Y')}.txt", "a")
+def log_and_print(message):
+    sys.stdout.write(message + '\n')
+    log_file.write(message + '\n')
+    log_file.flush()
 
 AUTO_EXECUTE = any([auto_arg in sys.argv for auto_arg in ['-a', '--auto']])
 CANCEL_ALL = any([auto_arg in sys.argv for auto_arg in ['-c', '--cancel', '--cancel-all']])
 
+if not AUTO_EXECUTE:
+    awknowledgement = """By using this tool I accept any and all responsibility for gains or losses caused by this tool.\nI awknowledge and accept that the repository owner, and any contributors, holds no responsibility for any of my gains or losses caused by this tool."""
+    log_and_print(awknowledgement)
+    response = input("Accept? (Y/*)")
+    if response.lower() != 'y':
+        exit()
+else:
+    log_and_print("Auto flag present- skipped awknowledgement.")
+
 def buy(symbol: str, shares: float):
-    print(f"BUY  {symbol} @ MARKET: {shares}")
+    log_and_print(f"BUY  {symbol} @ MARKET: {shares}")
     if not AUTO_EXECUTE and (CANCEL_ALL or input("Execute? (Y/*)").lower() != 'y'):
-        print(" - Order Canceled")
+        log_and_print(" - Order Canceled")
         return False
     else:
         r.order_buy_market(symbol, quantity, timeInForce='ioc')
-        print(" - Order Placed")
+        log_and_print(" - Order Placed")
         return True
 
 def sell(symbol: str, shares: float):
-    print(f"SELL  {symbol} @ MARKET: {shares}")
+    log_and_print(f"SELL  {symbol} @ MARKET: {shares}")
     if not AUTO_EXECUTE and (CANCEL_ALL or input("Execute? (Y/*)").lower() != 'y'):
-        print(" - Order Canceled")
+        log_and_print(" - Order Canceled")
         return False
     else:
         r.order_sell_market(symbol, quantity, timeInForce='foc')
-        print(" - Order Placed")
+        log_and_print(" - Order Placed")
         return True
     
 holdings = r.build_holdings()
@@ -47,13 +66,15 @@ for symbol in symbols + list(holdings.keys()):
     elif symbol in holdings and (action < 0 or float(holdings[symbol]['percent_change']) > (PARAMS['MAX_PROFIT_RATIO'] - 1)):
         sell_ratio = min(0.15 + np.sqrt(-action), PARAMS['MAX_SELL_PROPORTION'])
 
-        gain = sell_ratio * float(holdings[symbol]['equity']) * hist[-1]
+        gain = sell_ratio * float(holdings[symbol]['quantity']) * hist[-1]
         cost = sell_ratio * float(holdings[symbol]['average_buy_price']) * float(holdings[symbol]['quantity'])
 
         if (gain*0.95) / cost >= PARAMS['MIN_PROFIT_RATIO']:
             quantity = float(holdings[symbol]['quantity']) * sell_ratio
             
-            if sell(symbol, quantity, gain / quantity):
+            if sell(symbol, quantity):
                 FUNDS += gain * 0.95
     else:
-        print(f"HOLD {symbol}")
+        log_and_print(f"HOLD {symbol}")
+
+log_file.close()
