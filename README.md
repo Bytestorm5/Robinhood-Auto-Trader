@@ -16,6 +16,4 @@ The info here comes from my personal (more importantly, non-professional) experi
 
 Trading, including algorithmic trading, is risky. Only trade with money you can afford to lose. I'm not responsible for any losses you might incur using this algorithm.
 
-Keep in mind that financial markets are unpredictable.
-
 By using this algorithm, you accept that you're responsible for your actions. I'm not liable for any losses from using this tool.
