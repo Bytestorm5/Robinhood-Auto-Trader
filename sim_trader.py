@@ -1,5 +1,4 @@
 from dotenv import load_dotenv
-import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 import os

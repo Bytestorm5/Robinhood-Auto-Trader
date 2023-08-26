@@ -28,8 +28,6 @@ def refresh_params(override=True):
 
     PARAMS['STOCK_POOL'] = os.environ.get("STOCK_POOL", "")
 
-    print(PARAMS)
-
     # PARAMS['EMAIL'] = os.environ.get("EMAIL")
     # PARAMS['PASSWORD'] = os.environ.get("PASSWORD")
     # PARAMS['OTP_CODE'] = os.environ.get("OTP_CODE")
@@ -128,7 +126,7 @@ def determine_action(prices: list[float]) -> int:
     if exit_short[-2] > exit_long[-2] and exit_short[-1] < exit_long[-1]:
         return -1 * np.sqrt(1 - rsi_rescaled)
     if exit_short[-2] < exit_long[-2] and exit_short[-1] > exit_long[-1]:
-        return -0.5 * np.sqrt(1 - rsi_rescaled)
+        return 0.5 * np.sqrt(1 - rsi_rescaled)
     
     if exit_short[-1] == exit_long[-1]:
         if exit_short[-1] > 0:
