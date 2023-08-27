@@ -13,13 +13,17 @@ def refresh_params():
     load_dotenv()
     PARAMS['RSI_PERIOD'] = int(os.environ.get('RSI_PERIOD', 8))
     
-    PARAMS['ENTRY_MACD_SHORT_PERIOD'] = int(os.environ.get('ENTRY_MACD_SHORT_PERIOD', 12))
-    PARAMS['ENTRY_MACD_LONG_PERIOD'] = int(os.environ.get('ENTRY_MACD_LONG_PERIOD', 26))
-    PARAMS['ENTRY_MACD_SIGNAL_PERIOD'] = int(os.environ.get('ENTRY_MACD_SIGNAL_PERIOD', 9))
+    # PARAMS['ENTRY_MACD_SHORT_PERIOD'] = int(os.environ.get('ENTRY_MACD_SHORT_PERIOD', 12))
+    # PARAMS['ENTRY_MACD_LONG_PERIOD'] = int(os.environ.get('ENTRY_MACD_LONG_PERIOD', 26))
+    # PARAMS['ENTRY_MACD_SIGNAL_PERIOD'] = int(os.environ.get('ENTRY_MACD_SIGNAL_PERIOD', 9))
     
-    PARAMS['EXIT_MACD_SHORT_PERIOD'] = int(os.environ.get('EXIT_MACD_SHORT_PERIOD', 15))
-    PARAMS['EXIT_MACD_LONG_PERIOD'] = int(os.environ.get('EXIT_MACD_LONG_PERIOD', 39))
-    PARAMS['EXIT_MACD_SIGNAL_PERIOD'] = int(os.environ.get('EXIT_MACD_SIGNAL_PERIOD', 9))
+    # PARAMS['EXIT_MACD_SHORT_PERIOD'] = int(os.environ.get('EXIT_MACD_SHORT_PERIOD', 15))
+    # PARAMS['EXIT_MACD_LONG_PERIOD'] = int(os.environ.get('EXIT_MACD_LONG_PERIOD', 39))
+    # PARAMS['EXIT_MACD_SIGNAL_PERIOD'] = int(os.environ.get('EXIT_MACD_SIGNAL_PERIOD', 9))
+
+    PARAMS['MAC_WINDOW'] = int(os.environ.get('MAC_WINDOW', 10))
+    PARAMS['MAC_VISION'] = int(os.environ.get('MAC_VISION', 5))
+    PARAMS['STDDEV_WINDOW'] = int(os.environ.get('STDDEV_WINDOW', 20))
 
     PARAMS['MIN_FUNDS'] = float(os.environ.get('MIN_FUNDS', 50))
     PARAMS['MAX_SELL_PROPORTION'] = float(os.environ.get("MAX_SELL_PROPORTION", 1.0))
@@ -34,7 +38,7 @@ def refresh_params():
     # PARAMS['EMAIL'] = os.environ.get("EMAIL")
     # PARAMS['PASSWORD'] = os.environ.get("PASSWORD")
     # PARAMS['OTP_CODE'] = os.environ.get("OTP_CODE")
-
+    print(PARAMS)
 
 
 refresh_params()
@@ -113,76 +117,134 @@ def history(symbol, interval='day', span='year'):
 
     return prices
 
-def determine_action(prices: list[float]) -> int: 
-    #return random.choice([-1, 0, random.random()])  
+def high_low_history(symbol, interval='day', span='year'):
+    historicals = r.get_stock_historicals(symbol, interval, span)
+    highs = [float(day_data['high_price']) for day_data in historicals]
+    lows = [float(day_data['low_price']) for day_data in historicals]
+    prices = [float(day_data['close_price']) for day_data in historicals]
+
+    return prices, highs, lows
+
+def high_low_history_with_dates(symbol, interval='day', span='year'):
+    historicals = r.get_stock_historicals(symbol, interval, span)
+    highs = [float(day_data['high_price']) for day_data in historicals]
+    lows = [float(day_data['low_price']) for day_data in historicals]
+    prices = [float(day_data['close_price']) for day_data in historicals]
+
+    dates = [datetime.fromisoformat(day_data['begins_at']).astimezone(datetime.now().tzinfo) for day_data in historicals]
+    if len(dates) < len(prices):
+        dates.append(datetime.now())
+
+    if interval == '10minute':
+        dates = [date.strftime("%I:%M %p") for date in dates]
+    elif interval == 'hour':
+        dates = [date.strftime("%m/%d %I:%M %p") for date in dates]
+    else:
+        dates = [date.strftime("%m/%d/%Y") for date in dates]
+
+    return prices, highs, lows, dates
+
+def determine_action(highs: list[float], lows: list[float], prices: list[float]):
     rsi = calculate_rsi(prices, PARAMS['RSI_PERIOD'])
     rsi = [(datapoint / 100) for datapoint in rsi]
-
     rsi_rescaled = ((((rsi[-1] - 0.5)) ** 3) / 0.25) + 0.5
+    rsi_vals = {1: rsi_rescaled, -1: -(1 - rsi_rescaled)}
 
-    entry_macd = calculate_macd(prices, PARAMS['ENTRY_MACD_SHORT_PERIOD'], PARAMS['ENTRY_MACD_LONG_PERIOD'], PARAMS['ENTRY_MACD_SIGNAL_PERIOD'])
-    exit_macd = calculate_macd(prices, PARAMS['EXIT_MACD_SHORT_PERIOD'], PARAMS['EXIT_MACD_LONG_PERIOD'], PARAMS['EXIT_MACD_SIGNAL_PERIOD'])
-
-    entry_short = list(entry_macd['MACD_Line'])
-    entry_long = list(entry_macd['Signal_Line']) 
-
-    exit_short = list(exit_macd['MACD_Line'])
-    exit_long = list(exit_macd['Signal_Line'])
+    data = pd.DataFrame({'Highs':highs, 'Lows':lows})
     
+    if min(len(highs), len(lows)) < 10:
+        return 0
+
     # Extreme sudden jumps should be caught by this
     bollinger_bands = calculate_bollinger(prices, window=PARAMS['BOLLINGER_WINDOW'], std_prod=PARAMS['BOLLINGER_STD_MULT'])
+    
     if len(prices) > PARAMS['BOLLINGER_WINDOW'] and prices[-1] >= list(bollinger_bands['Upper_Band'])[-1]:
-        return -1 * np.sqrt(1 - rsi_rescaled)
+        return rsi_vals[-1]
     
-    # We don't buy on sudden drops because the stock could be experiencing an external catastrophic failure
-    # if prices[-1] < list(bollinger_bands['Lower_Band'])[-1]:
-    #     return 1 * np.sqrt(rsi_rescaled)
+    high_bound = list(data['Highs'].rolling(PARAMS['MAC_WINDOW']).mean())
+    low_bound = list(data['Lows'].rolling(PARAMS['MAC_WINDOW']).mean())
+    
+    stddev = pd.DataFrame({'Prices':prices})['Prices'].rolling(window=PARAMS['STDDEV_WINDOW']).std().mean()
+    stddev = 0.05 / stddev
 
-    #Buy when MACD surpasses 0
-    if entry_short[-1] >= 0 and entry_short[-2] <= 0 and entry_short[-1] != entry_short[-2]:
-        return 1 * np.sqrt(rsi_rescaled)
-    
-    # Exit Crossover
-    if exit_short[-2] > exit_long[-2] and exit_short[-1] < exit_long[-1]:
-        return -1 * np.sqrt(1 - rsi_rescaled)
-    if exit_short[-2] < exit_long[-2] and exit_short[-1] > exit_long[-1]:
-        return 0.5 * np.sqrt(1 - rsi_rescaled)
-    
-    if exit_short[-1] == exit_long[-1]:
-        if exit_short[-1] > 0:
-            return -0.25 * np.sqrt(1 - rsi_rescaled)
-        else:
-            return 0.25 * np.sqrt(rsi_rescaled)
-        
-    #Entry Crossover
-    if entry_short[-2] < entry_long[-2] and entry_short[-1] > entry_long[-1]:
-        return 1 * np.sqrt(rsi_rescaled)
-    if entry_short[-2] > entry_long[-2] and entry_short[-1] < entry_long[-1]:
-        return -0.5 * np.sqrt(1 - rsi_rescaled)
-    
-    if entry_short[-1] == entry_long[-1]:
-        if exit_short > 0:
-            return -0.25 * np.sqrt(1 - rsi_rescaled)
-        else:
-            return 0.25 * np.sqrt(rsi_rescaled)
-    
-    short_hist_diff = list(entry_macd['Hist_Diff'])
-    short_histogram = list(entry_macd['MACD_Histogram'])
-    short_hist_scale = 0.2 / (1 + np.exp(-0.3 * short_histogram[-1]))
+    flip = -1 if stddev <= 0.005 else 1
 
-    long_hist_diff = list(entry_macd['Hist_Diff'])
-    long_histogram = list(entry_macd['MACD_Histogram'])
-    long_hist_scale = 0.2 / (1 + np.exp(-0.3 * long_histogram[-1]))
-
-    # Peak
-    if long_hist_diff[-1] < 0 and long_hist_diff[-2] > 0 and long_histogram[-1] > 0:
-        return -long_hist_scale * np.sqrt(1 - rsi_rescaled)
-    
-    # Valley
-    if short_hist_diff[-1] > 0 and short_hist_diff[-2] < 0 and short_histogram[-1] < 0:
-        return short_hist_scale * np.sqrt(rsi_rescaled)
-
+    if all([lows[i] > high_bound[i] for i in range(-PARAMS['MAC_VISION'], 0)]):
+        return rsi_vals[-1 * flip]
+    if all([highs[i] < low_bound[i] for i in range(-PARAMS['MAC_VISION'], 0)]):
+        return rsi_vals[1 * flip]
     return 0
+
+# def determine_action(prices: list[float]) -> int: 
+#     rsi = calculate_rsi(prices, PARAMS['RSI_PERIOD'])
+#     rsi = [(datapoint / 100) for datapoint in rsi]
+
+#     rsi_rescaled = ((((rsi[-1] - 0.5)) ** 3) / 0.25) + 0.5
+
+#     entry_macd = calculate_macd(prices, PARAMS['ENTRY_MACD_SHORT_PERIOD'], PARAMS['ENTRY_MACD_LONG_PERIOD'], PARAMS['ENTRY_MACD_SIGNAL_PERIOD'])
+#     exit_macd = calculate_macd(prices, PARAMS['EXIT_MACD_SHORT_PERIOD'], PARAMS['EXIT_MACD_LONG_PERIOD'], PARAMS['EXIT_MACD_SIGNAL_PERIOD'])
+
+#     entry_short = list(entry_macd['MACD_Line'])
+#     entry_long = list(entry_macd['Signal_Line']) 
+
+#     exit_short = list(exit_macd['MACD_Line'])
+#     exit_long = list(exit_macd['Signal_Line'])
+    
+#     # Extreme sudden jumps should be caught by this
+#     bollinger_bands = calculate_bollinger(prices, window=PARAMS['BOLLINGER_WINDOW'], std_prod=PARAMS['BOLLINGER_STD_MULT'])
+    
+#     if len(prices) > PARAMS['BOLLINGER_WINDOW'] and prices[-1] >= list(bollinger_bands['Upper_Band'])[-1]:
+#         return -1 * np.sqrt(1 - rsi_rescaled)
+    
+#     # We don't buy on sudden drops because the stock could be experiencing an external catastrophic failure
+#     # if prices[-1] < list(bollinger_bands['Lower_Band'])[-1]:
+#     #     return 1 * np.sqrt(rsi_rescaled)
+
+#     #Buy when MACD surpasses 0
+#     if entry_short[-1] >= 0 and entry_short[-2] <= 0 and entry_short[-1] != entry_short[-2]:
+#         return 1 * np.sqrt(rsi_rescaled)
+    
+#     # Exit Crossover
+#     if exit_short[-2] > exit_long[-2] and exit_short[-1] < exit_long[-1]:
+#         return -1 * np.sqrt(1 - rsi_rescaled)
+#     if exit_short[-2] < exit_long[-2] and exit_short[-1] > exit_long[-1]:
+#         return 0.5 * np.sqrt(1 - rsi_rescaled)
+    
+#     if exit_short[-1] == exit_long[-1]:
+#         if exit_short[-1] > 0:
+#             return -0.25 * np.sqrt(1 - rsi_rescaled)
+#         else:
+#             return 0.25 * np.sqrt(rsi_rescaled)
+        
+#     #Entry Crossover
+#     if entry_short[-2] < entry_long[-2] and entry_short[-1] > entry_long[-1]:
+#         return 1 * np.sqrt(rsi_rescaled)
+#     if entry_short[-2] > entry_long[-2] and entry_short[-1] < entry_long[-1]:
+#         return -0.5 * np.sqrt(1 - rsi_rescaled)
+    
+#     if entry_short[-1] == entry_long[-1]:
+#         if exit_short > 0:
+#             return -0.25 * np.sqrt(1 - rsi_rescaled)
+#         else:
+#             return 0.25 * np.sqrt(rsi_rescaled)
+    
+#     short_hist_diff = list(entry_macd['Hist_Diff'])
+#     short_histogram = list(entry_macd['MACD_Histogram'])
+#     short_hist_scale = 0.2 / (1 + np.exp(-0.3 * short_histogram[-1]))
+
+#     long_hist_diff = list(entry_macd['Hist_Diff'])
+#     long_histogram = list(entry_macd['MACD_Histogram'])
+#     long_hist_scale = 0.2 / (1 + np.exp(-0.3 * long_histogram[-1]))
+
+#     # Peak
+#     if long_hist_diff[-1] < 0 and long_hist_diff[-2] > 0 and long_histogram[-1] > 0:
+#         return -long_hist_scale * np.sqrt(1 - rsi_rescaled)
+    
+#     # Valley
+#     if short_hist_diff[-1] > 0 and short_hist_diff[-2] < 0 and short_histogram[-1] < 0:
+#         return short_hist_scale * np.sqrt(rsi_rescaled)
+
+#     return 0
 
 def interval_span_for_time(days: float) -> tuple[str, str]:
     if days <= 1:

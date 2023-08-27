@@ -17,23 +17,16 @@ RSI_PERIOD="8"
 
 The RSI Period is used to weight how much of a stock to buy when a buy signal is received. When the RSI is high, less stock is bought, and when the RSI is low, more is bought. This helps mitigate cases where the algorithm picks a high point to buy on. It's reccomended to keep the RSI Period relatively small.
 
-## Entry MACD
+# MAC Parameters
 ```
-ENTRY_MACD_SHORT_PERIOD="12"
-ENTRY_MACD_LONG_PERIOD="26"
-ENTRY_MACD_SIGNAL_PERIOD="9"
-```
-
-The Entry MACD is used to determine when to buy a stock, and should generally be smaller than the Exit MACD so that it picks up on stock movements quicker. 
-
-## Exit MACD
-```
-EXIT_MACD_SHORT_PERIOD="15"
-EXIT_MACD_LONG_PERIOD="39"
-EXIT_MACD_SIGNAL_PERIOD="9"
+MAC_WINDOW="10"
+MAC_VISION="3"
+STDDEV_WINDOW="20"
 ```
 
-The Exit MACD is used to determine when to sell a stock, and should generally be larger than the Entry MACD so that it picks up on more long term stock movements.
+The MAC evaluates whether to buy or sell based on a moving average of the highest and lowest prices of a stock in a given day. If a stock's low point exceeds the average high point for some amount of days in a row, it is likely that the stock is taking a positive trend, triggering a buy. The reverse is true for selling.
+
+Depending on the standard deviation of the stock it can help to flip this behavior, as certain stocks may not show a sufficiently significant positive trend even after such price increases.
 
 ## Min Funds
 ```

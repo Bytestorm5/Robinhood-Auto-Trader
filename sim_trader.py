@@ -4,7 +4,7 @@ from tqdm import tqdm
 import os
 load_dotenv()
 
-from robin_trader import determine_action, history
+from robin_trader import determine_action, history, high_low_history
 import robin_trader
 from datetime import datetime, timedelta
 
@@ -12,21 +12,21 @@ histories = {}
 history_length = 0
 last_history_update = datetime.now()
 
-def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None):
+def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = False):
     global histories, history_length, last_history_update
     symbols = os.environ.get("STOCK_POOL").split() if custom_symbols == None else custom_symbols
     symbols = list(set(symbols)) # Just in case
 
     AVAILABLE_FUNDS = START_FUNDS
-    START = robin_trader.PARAMS['EXIT_MACD_LONG_PERIOD']
+    START = max(robin_trader.PARAMS['RSI_PERIOD'], robin_trader.PARAMS['MAC_WINDOW'], robin_trader.PARAMS['STDDEV_WINDOW'], robin_trader.PARAMS['MAC_VISION'], robin_trader.PARAMS['BOLLINGER_WINDOW'])
 
     positions = {}
     costs = {}
 
     for symbol in symbols:
         if symbol not in histories or datetime.now() - last_history_update > timedelta(hours=1):
-            histories[symbol] = history(symbol)
-            history_length = max(history_length, len(histories[symbol]))
+            histories[symbol] = high_low_history(symbol, span='year')
+            history_length = max(history_length, len(histories[symbol][0]))
 
         positions[symbol] = 0
         costs[symbol] = 0
@@ -38,8 +38,13 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None):
         BUY_AMOUNT = (AVAILABLE_FUNDS / len(symbols))
         available_graph_with_nonliquid.append(0)
         for symbol in symbols:
-            hist = histories[symbol][:i]
-            action = determine_action(hist)                
+            hist, highs, lows = histories[symbol]
+            hist = hist[:i]
+            highs = highs[:i]
+            lows = lows[:i]
+            action = determine_action(highs, lows, hist)        
+            if flip:
+                action *= -1      
 
             gain = positions[symbol] * hist[-1]
             cost = costs[symbol]
@@ -55,13 +60,13 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None):
                 # print(f"BUY {quantity} {symbol} @ {hist[-1]}")
             # Sell
             elif positions[symbol] > 0 and (action < 0 or gain / cost >= robin_trader.PARAMS['MAX_PROFIT_RATIO']):               
-                sell_ratio = min(0.15 + np.sqrt(-action), 1)
+                sell_ratio = min(min(0.15 + np.sqrt(-action), 1) if action < 0 else 1, robin_trader.PARAMS.get('MAX_SELL_PROPORTION', 1))
 
                 gain = sell_ratio * positions[symbol] * hist[-1] * 0.95
                 cost = sell_ratio * costs[symbol]
 
                 if gain / cost >= robin_trader.PARAMS['MIN_PROFIT_RATIO']:
-                    # print(f"SELL {positions[symbol]} {symbol} @ {hist[-1]}")
+                    #print(f"SELL {positions[symbol]} {symbol} @ {hist[-1]}")
                     positions[symbol] *= 1 - sell_ratio
                     costs[symbol] *= 1 - sell_ratio
                     AVAILABLE_FUNDS += gain                  
@@ -71,3 +76,6 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None):
         available_graph_with_nonliquid[-1] += AVAILABLE_FUNDS
     
     return available_graph_with_nonliquid, list(range(START, history_length))
+
+if __name__ == "__main__":
+    sim_trades(4000)

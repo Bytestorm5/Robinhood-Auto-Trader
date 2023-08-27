@@ -52,8 +52,8 @@ symbols = PARAMS['STOCK_POOL'].split()
 
 BUY_AMOUNT = FUNDS / len(symbols)
 for symbol in symbols + list(holdings.keys()):
-    hist = history(symbol)
-    action = determine_action(hist)
+    highs, lows, hist = high_low_history(symbol)
+    action = determine_action(highs, lows, hist)
 
     # Only Buy if there are sufficient funds and this is a stock we want to buy
     # All other stocks should *eventually* be sold- when the time is right

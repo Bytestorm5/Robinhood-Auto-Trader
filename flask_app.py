@@ -50,29 +50,40 @@ def get_holdings():
 def stock():
     symbol = request.args.get('symbol')
     interval = request.args.get('interval', 'day')
-    span = request.args.get('span', '3month')
+    span = request.args.get('span', 'year')
 
-    values, labels = robin_trader.history_with_date(symbol, interval, span)
+    values, highs, lows, labels = robin_trader.high_low_history_with_dates(symbol, interval, span)
 
     radii = [0] * len(values)
     bgs = ['blue'] * len(values)
 
+    START = max(robin_trader.PARAMS['RSI_PERIOD'], robin_trader.PARAMS['MAC_WINDOW'], robin_trader.PARAMS['STDDEV_WINDOW'], robin_trader.PARAMS['MAC_VISION'], robin_trader.PARAMS['BOLLINGER_WINDOW'])
+
     if interval == 'day' and len(values) > 39:
-        entry_macd = robin_trader.calculate_macd(values, robin_trader.PARAMS['ENTRY_MACD_SHORT_PERIOD'], robin_trader.PARAMS['ENTRY_MACD_LONG_PERIOD'], robin_trader.PARAMS['ENTRY_MACD_SIGNAL_PERIOD'])
-        exit_macd = robin_trader.calculate_macd(values, robin_trader.PARAMS['EXIT_MACD_SHORT_PERIOD'], robin_trader.PARAMS['EXIT_MACD_LONG_PERIOD'], robin_trader.PARAMS['EXIT_MACD_SIGNAL_PERIOD'])
-        for i in range(robin_trader.PARAMS['EXIT_MACD_LONG_PERIOD'], len(values)):
-            action = robin_trader.determine_action(values[:i])
+        for i in range(START, len(values)):
+            action = robin_trader.determine_action(highs[:i], lows[:i], values[:i])
             if action > 0:
-                radii[i-1] = 3
+                radii[i-1] = 2
                 bgs[i-1] = 'green'
             elif action < 0:
-                radii[i-1] = 3
+                radii[i-1] = 2
                 bgs[i-1] = 'red'
         
-    upper_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Upper_Band'])
-    upper_band = [values[i] if i <= 39 else upper_band[i] for i in range(len(upper_band))]
+    # upper_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Upper_Band'])
+    # upper_band = [values[i] if i <= 39 else upper_band[i] for i in range(len(upper_band))]
 
-    return render_template("stock.html", values=str(values), band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs), entry_macd=str(list(entry_macd['MACD_Line'])), entry_signal=str(list(entry_macd['Signal_Line'])), entry_hist=str(list(entry_macd['MACD_Histogram'])), exit_macd=str(list(exit_macd['MACD_Line'])), exit_signal=str(list(exit_macd['Signal_Line'])), exit_hist=str(list(exit_macd['MACD_Histogram'])))
+    # lower_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Lower_Band'])
+    # lower_band = [values[i] if i <= 39 else lower_band[i] for i in range(len(lower_band))]
+
+    data = pd.DataFrame({'Highs':highs, 'Lows':lows})
+    
+    if min(len(highs), len(lows)) < 10:
+        return 0
+
+    upper_band = values[:10] +  list(data['Highs'].rolling(10).mean())[10:]
+    lower_band = values[:10] + list(data['Lows'].rolling(10).mean())[10:]
+
+    return render_template("stock.html", values=str(values), lower_band=str(lower_band), upper_band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs))
 
 @app.route("/params", methods=['GET'])
 def params(): 
@@ -120,25 +131,25 @@ def stock_pool():
         row = "<tr {hsl_vals}>"
         row += f"<td class=\"td-symbol\"><a href=\"{url_for('stock')}?symbol={symbol}\">{symbol}</a></td>"
 
-        hist = robin_trader.history(symbol)
-        action = robin_trader.determine_action(hist)
+        hist, highs, lows = robin_trader.high_low_history(symbol)
+        action = robin_trader.determine_action(highs, lows, hist)
 
         row += f"<td class=\"td-number\">${hist[-1]}</td>"
         if action < 0:
             percentage = (action*-1)*100
             row += "<td class=\"td-number\">Sell</td>"
             row += f"<td class=\"td-number\">{int(percentage*10)/10}%</td>"            
-            row = row.format(hsl_vals=f"style=\"background-color: hsl(0, {int(percentage)}%, {100-int(percentage)}%);\"")
+            row = row.format(hsl_vals=f"style=\"background-color: hsl(0, {int(percentage)}%, {100-int(percentage)//2}%);\"")
         elif action > 0:
             percentage = (action)*100
             row += "<td class=\"td-number\">Buy</td>"
             row += f"<td class=\"td-number\">{int(percentage*10)/10}%</td>"            
-            row = row.format(hsl_vals=f"style=\"background-color: hsl(130, {int(percentage)}%, {100-int(percentage)}%);\"")
+            row = row.format(hsl_vals=f"style=\"background-color: hsl(130, {int(percentage)}%, {100-int(percentage)//2}%);\"")
         else:
             percentage = "N/A"
             row += "<td class=\"td-number\">Hold</td>"
             row += f"<td class=\"td-number\">N/A</td>"
-            row.format(hsl_vals=f"")
+            row = row.format(hsl_vals=f"")
         row += "</tr>"
         data += row
 

@@ -15,7 +15,8 @@ if __name__ == '__main__':
     #     'UMMA', 'HLAL', 'SPSK', 'SPRE', 'SPUS'
     # ]
     for symbol in symbols:
-        action = determine_action(history(symbol, span='year'))
+        highs, lows, values = history(symbol, span='year')
+        action = determine_action(highs, lows, values)
         if action > 0:
             print(f"{symbol}: Buy ({str(action*100)[:5]}%)")
         elif action == 0:
