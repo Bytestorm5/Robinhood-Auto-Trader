@@ -26,7 +26,15 @@
                   pointRadius: {{ radii | safe }},
                   pointBackgroundColor: {{ bgs | safe }},
                   pointBorderWidth: 0
-                }],
+                },
+                {
+                    label: 'Upper Bound',
+                    data: {{ band | safe }},
+                    borderWidth: 1,
+                    pointBorderWidth: 0,
+                    pointRadius: 0
+                }
+                ],
                 options: {
                     plugins: {
                         title: {

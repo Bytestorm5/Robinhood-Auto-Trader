@@ -7,6 +7,7 @@ from base64 import b64encode
 import re
 import robin_trader
 import sim_trader
+import pandas as pd
 #from flask_limiter import Limiter
 
 #import subprocess
@@ -67,8 +68,11 @@ def stock():
             elif action < 0:
                 radii[i-1] = 3
                 bgs[i-1] = 'red'
+        
+    upper_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Upper_Band'])
+    upper_band = [values[i] if i <= 39 else upper_band[i] for i in range(len(upper_band))]
 
-    return render_template("stock.html", values=str(values), labels=str(labels), radii=str(radii), bgs=str(bgs), entry_macd=str(list(entry_macd['MACD_Line'])), entry_signal=str(list(entry_macd['Signal_Line'])), entry_hist=str(list(entry_macd['MACD_Histogram'])), exit_macd=str(list(exit_macd['MACD_Line'])), exit_signal=str(list(exit_macd['Signal_Line'])), exit_hist=str(list(exit_macd['MACD_Histogram'])))
+    return render_template("stock.html", values=str(values), band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs), entry_macd=str(list(entry_macd['MACD_Line'])), entry_signal=str(list(entry_macd['Signal_Line'])), entry_hist=str(list(entry_macd['MACD_Histogram'])), exit_macd=str(list(exit_macd['MACD_Line'])), exit_signal=str(list(exit_macd['Signal_Line'])), exit_hist=str(list(exit_macd['MACD_Histogram'])))
 
 @app.route("/params", methods=['GET'])
 def params(): 
@@ -94,15 +98,18 @@ def set_params():
 
         for field in [key for key in keys if key not in ['EMAIL', 'PASSWORD', 'OTP_CODE']]:
             value = request.form.get(field, os.environ.get(field))
+            if value == None:
+                print(f"{field} is None")
+                # Don't touch it, it's probably broken
+            else:
+                if re.match(r'^\d+\.\d+$', value):
+                    value = float(value)
+                elif re.match(r'^\d+$', value):
+                    value = int(value)
 
-            if re.match(r'^\d+\.\d+$', value):
-                value = float(value)
-            elif re.match(r'^\d+$', value):
-                value = int(value)
-
-            writer.write(f"{field}=\"{value}\"\n")
-            os.environ[field] = str(value)
-            robin_trader.PARAMS[field] = value
+                writer.write(f"{field}=\"{value}\"\n")
+                os.environ[field] = str(value)
+                robin_trader.PARAMS[field] = value
 
     return redirect(url_for('params'))
 
@@ -110,28 +117,30 @@ def set_params():
 def stock_pool():
     data = ""
     for symbol in robin_trader.PARAMS['STOCK_POOL'].split():
-        data += "<tr style=\"background-color: hsl({hsl_vals});\">"
-        data += f"<td class=\"td-symbol\"><a href=\"{url_for('stock')}?symbol={symbol}\">{symbol}</a></td>"
+        row = "<tr {hsl_vals}>"
+        row += f"<td class=\"td-symbol\"><a href=\"{url_for('stock')}?symbol={symbol}\">{symbol}</a></td>"
 
         hist = robin_trader.history(symbol)
         action = robin_trader.determine_action(hist)
 
-        data += f"<td class=\"td-number\">${hist[-1]}</td>"
+        row += f"<td class=\"td-number\">${hist[-1]}</td>"
         if action < 0:
             percentage = (action*-1)*100
-            data += "<td class=\"td-symbol\">Sell</td>"
-            data += f"<td class=\"td-number\">{percentage}%</td>"            
-            data = data.format(hsl_vals=f"0, {int(percentage)}%, {50 + int(percentage/2)}%")
+            row += "<td class=\"td-number\">Sell</td>"
+            row += f"<td class=\"td-number\">{int(percentage*10)/10}%</td>"            
+            row = row.format(hsl_vals=f"style=\"background-color: hsl(0, {int(percentage)}%, {100-int(percentage)}%);\"")
         elif action > 0:
             percentage = (action)*100
-            data += "<td class=\"td-number\">Buy</td>"
-            data += f"<td class=\"td-number\">{(action)*100}%</td>"            
-            data = data.format(hsl_vals=f"130, {int(percentage)}%, {50 + int(percentage/2)}%")
+            row += "<td class=\"td-number\">Buy</td>"
+            row += f"<td class=\"td-number\">{int(percentage*10)/10}%</td>"            
+            row = row.format(hsl_vals=f"style=\"background-color: hsl(130, {int(percentage)}%, {100-int(percentage)}%);\"")
         else:
             percentage = "N/A"
-            data += "<td class=\"td-number\">Hold</td>"
-            data += f"<td class=\"td-number\">N/A</td>"
-        data += "</tr>"
+            row += "<td class=\"td-number\">Hold</td>"
+            row += f"<td class=\"td-number\">N/A</td>"
+            row.format(hsl_vals=f"")
+        row += "</tr>"
+        data += row
 
     return render_template("pool.html", table_data=data)
 

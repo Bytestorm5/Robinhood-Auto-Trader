@@ -26,6 +26,9 @@ def refresh_params():
     PARAMS['MAX_PROFIT_RATIO'] = float(os.environ.get("MAX_PROFIT_RATIO", 1.5))
     PARAMS['MIN_PROFIT_RATIO'] = float(os.environ.get("MIN_PROFIT_RATIO", 1.3))
 
+    PARAMS['BOLLINGER_WINDOW'] = int(os.environ.get("BOLLINGER_WINDOW", ""))
+    PARAMS['BOLLINGER_STD_MULT'] = float(os.environ.get("BOLLINGER_STD_MULT", ""))
+
     PARAMS['STOCK_POOL'] = os.environ.get("STOCK_POOL", "")
 
     # PARAMS['EMAIL'] = os.environ.get("EMAIL")
@@ -37,6 +40,14 @@ def refresh_params():
 refresh_params()
 login = r.login(os.environ.get("EMAIL"), os.environ.get("PASSWORD"), mfa_code=pyotp.TOTP(os.environ.get("OTP_CODE")).now())
 
+def calculate_bollinger(prices, window=20, std_prod=2):
+    # Convert the price data to a pandas DataFrame
+    data = pd.DataFrame({'Price': prices})
+    data['SMA'] = data['Price'].rolling(window=window).mean()
+    data['std'] = data['Price'].rolling(window=window).std()
+    data['Upper_Band'] = data['SMA'] + std_prod * data['std']
+    data['Lower_Band'] = data['SMA'] - std_prod * data['std']
+    return data
 
 def calculate_macd(prices_daily, short_period=12, long_period=26, signal_period=9):
     data = pd.DataFrame({'Close': prices_daily})
@@ -47,7 +58,7 @@ def calculate_macd(prices_daily, short_period=12, long_period=26, signal_period=
     data['Signal_Diff'] = data['Signal_Line'].diff()
     data['Signal_Acc'] = data['Signal_Line'].diff()
     data['MACD_Histogram'] = data['MACD_Line'] - data['Signal_Line']
-    data['Hist_Diff'] = data['MACD_Histogram'].ewm(span=short_period//2).mean().diff()
+    data['Hist_Diff'] = data['MACD_Histogram'].ewm(span=long_period).mean().diff()
     return data
 
 def calculate_rsi(data, period=14):
@@ -118,6 +129,15 @@ def determine_action(prices: list[float]) -> int:
     exit_short = list(exit_macd['MACD_Line'])
     exit_long = list(exit_macd['Signal_Line'])
     
+    # Extreme sudden jumps should be caught by this
+    bollinger_bands = calculate_bollinger(prices, window=PARAMS['BOLLINGER_WINDOW'], std_prod=PARAMS['BOLLINGER_STD_MULT'])
+    if len(prices) > PARAMS['BOLLINGER_WINDOW'] and prices[-1] >= list(bollinger_bands['Upper_Band'])[-1]:
+        return -1 * np.sqrt(1 - rsi_rescaled)
+    
+    # We don't buy on sudden drops because the stock could be experiencing an external catastrophic failure
+    # if prices[-1] < list(bollinger_bands['Lower_Band'])[-1]:
+    #     return 1 * np.sqrt(rsi_rescaled)
+
     #Buy when MACD surpasses 0
     if entry_short[-1] >= 0 and entry_short[-2] <= 0 and entry_short[-1] != entry_short[-2]:
         return 1 * np.sqrt(rsi_rescaled)

@@ -71,15 +71,25 @@
     </div>
     <div class="form-element">
       <label class="label" for="float">Maximum Sell Proportion:</label>
-      <input class="input-field float-input" type="number" step="0.1" id="MAX_SELL_PROPORTION" name="MAX_SELL_PROPORTION">
+      <input class="input-field float-input" type="number" step="0.01" id="MAX_SELL_PROPORTION" name="MAX_SELL_PROPORTION">
     </div>
     <div class="form-element">
       <label class="label" for="float">Maximum Profit Ratio:</label>
-      <input class="input-field float-input" type="number" step="0.1" id="MAX_PROFIT_RATIO" name="MAX_PROFIT_RATIO">
+      <input class="input-field float-input" type="number" step="0.01" id="MAX_PROFIT_RATIO" name="MAX_PROFIT_RATIO">
     </div>
     <div class="form-element">
       <label class="label" for="float">Minimum Profit Ratio:</label>
-      <input class="input-field float-input" type="number" step="0.1" id="MIN_PROFIT_RATIO" name="MIN_PROFIT_RATIO">
+      <input class="input-field float-input" type="number" step="0.01" id="MIN_PROFIT_RATIO" name="MIN_PROFIT_RATIO">
+    </div>
+    <div style="margin-block: 48px;">
+      <div class="form-element">
+        <label class="label" for="integer">Bollinger Bands Window:</label>
+        <input class="input-field integer-input" type="number" id="BOLLINGER_WINDOW" name="BOLLINGER_WINDOW">
+      </div>
+      <div class="form-element">
+        <label class="label" for="float">Bollinger Bands Deviation Distance:</label>
+        <input class="input-field float-input" type="number" step="0.1" id="BOLLINGER_STD_MULT" name="BOLLINGER_STD_MULT">
+      </div>
     </div>
     <div class="form-element">
       <label class="label" for="string">Stock Pool:</label>
