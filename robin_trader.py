@@ -38,7 +38,6 @@ def refresh_params():
     # PARAMS['EMAIL'] = os.environ.get("EMAIL")
     # PARAMS['PASSWORD'] = os.environ.get("PASSWORD")
     # PARAMS['OTP_CODE'] = os.environ.get("OTP_CODE")
-    print(PARAMS)
 
 
 refresh_params()

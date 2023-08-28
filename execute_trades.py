@@ -50,10 +50,19 @@ profile = r.build_user_profile()
 FUNDS = float(profile['cash'])
 symbols = PARAMS['STOCK_POOL'].split()
 
+all_symbols = list(set(symbols + list(holdings.keys())))
+
+softmax_sum = [np.exp(float(holdings.get(symbol, {'percent_change':0})['percent_change'])) for symbol in all_symbols]
+portions = {}
+for symbol in all_symbols:
+    portions[symbol] = np.exp(float(holdings.get(symbol, {'percent_change':0})['percent_change'])) / softmax_sum
+
 BUY_AMOUNT = FUNDS / len(symbols)
-for symbol in symbols + list(holdings.keys()):
+for symbol in all_symbols:
     highs, lows, hist = high_low_history(symbol)
     action = determine_action(highs, lows, hist)
+
+    BUY_AMOUNT = FUNDS * portions[symbol] #/ len(symbols)
 
     # Only Buy if there are sufficient funds and this is a stock we want to buy
     # All other stocks should *eventually* be sold- when the time is right
@@ -74,6 +83,8 @@ for symbol in symbols + list(holdings.keys()):
             
             if sell(symbol, quantity):
                 FUNDS += gain * 0.95
+        else:
+            log_and_print(f"HOLD {symbol}")
     else:
         log_and_print(f"HOLD {symbol}")
 
