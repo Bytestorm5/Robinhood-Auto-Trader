@@ -92,8 +92,8 @@ def params():
 @app.route("/api/simTrade")
 def sim_trade():
     start_value = request.args.get("start_value", robin_trader.current_total_value())
-    values, times = sim_trader.sim_trades(start_value)
-    return jsonify(values=values, times=times)
+    values, cash, times = sim_trader.sim_trades(start_value)
+    return jsonify(values=values, cash=cash, times=times)
 
 @app.route("/api/setParams", methods=['POST'])
 def set_params():

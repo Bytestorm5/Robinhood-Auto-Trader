@@ -143,6 +143,7 @@
             placeholder_chart.destroy()
 
             values = result['values']
+            cash = result['cash']
             dates = result['times']
 
             new Chart(ctx, {
@@ -153,6 +154,12 @@
                 datasets: [{
                   label: 'Total Value',
                   data: values,
+                  borderWidth: 1,
+                  radius: 0
+                },
+                {
+                  label: 'Total Cash',
+                  data: cash,
                   borderWidth: 1,
                   radius: 0
                 }]
