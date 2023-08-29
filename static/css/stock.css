@@ -11,3 +11,75 @@
     display: block;
     width: 800px;
 }
+
+.action-container {
+    display: flex;
+    flex-direction: row;
+    width: 80%;
+    margin: auto;
+    justify-content: center;
+    gap: 15px;
+}
+
+.limit-buy-action {
+    padding: 5px;
+    border: 1px solid rgb(47, 255, 57);
+    border-radius: 15px;
+}
+
+.limit-sell-action {
+    padding-inline: 15px;
+    padding-block: 10px;
+    border: 1px solid rgb(255, 47, 47);
+    border-radius: 15px;
+}
+
+.submit-button {
+    width: 100%;
+    font-size: large;
+}
+
+.sell-submit {
+    background-color: rgb(206, 38, 38);
+}
+
+.buy-submit {
+    background-color: rgb(44, 206, 38);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-family: Arial, sans-serif;
+  }
+  
+  /* Style for the table header */
+  th {
+    background-color: #f2f2f2;
+    border-bottom: 2px solid #ddd;
+    text-align: right;
+    padding: 10px;
+  }
+  
+  /* Alternating row colors for better readability */
+  tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  
+  /* Style for table rows */
+  td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+  }
+  .td-symbol {
+    text-align: left
+  }
+  .td-number {
+    text-align: right;
+  }
+  
+  /* Hover effect on table rows */
+  tr:hover {
+    background-color: #e0e0e0;
+  }

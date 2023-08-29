@@ -24,23 +24,35 @@ if not AUTO_EXECUTE:
 else:
     log_and_print("Auto flag present- skipped awknowledgement.")
 
-def buy(symbol: str, shares: float):
-    log_and_print(f"BUY  {symbol} @ MARKET: {shares}")
+def buy(symbol: str, shares: float, limit: float | None):
+    if limit == None:
+        log_and_print(f"BUY  {symbol} @ MARKET: {shares}")
+    else:
+        log_and_print(f"BUY  {symbol} @ >= {limit}: {shares}")
     if not AUTO_EXECUTE and (CANCEL_ALL or input("Execute? (Y/*)").lower() != 'y'):
         log_and_print(" - Order Canceled")
         return False
     else:
-        r.order_buy_market(symbol, quantity, timeInForce='ioc')
+        if limit == None:
+            r.order_buy_market(symbol, quantity, timeInForce='ioc')
+        else:
+            r.order_buy_limit(symbol, quantity, limit, timeInForce='gfd')
         log_and_print(" - Order Placed")
         return True
 
-def sell(symbol: str, shares: float):
-    log_and_print(f"SELL  {symbol} @ MARKET: {shares}")
+def sell(symbol: str, shares: float, limit: float | None):
+    if limit == None:
+        log_and_print(f"SELL  {symbol} @ MARKET: {shares}")
+    else:
+        log_and_print(f"SELL  {symbol} @ >= {limit}: {shares}")
     if not AUTO_EXECUTE and (CANCEL_ALL or input("Execute? (Y/*)").lower() != 'y'):
         log_and_print(" - Order Canceled")
         return False
     else:
-        r.order_sell_market(symbol, quantity, timeInForce='foc')
+        if limit == None:
+            r.order_sell_market(symbol, quantity, timeInForce='ioc')
+        else:
+            r.order_sell_limit(symbol, quantity, limit, timeInForce='gfd')
         log_and_print(" - Order Placed")
         return True
     
@@ -70,7 +82,7 @@ for symbol in all_symbols:
         to_spend = min((BUY_AMOUNT * action), FUNDS*0.9)
         quantity = to_spend / hist[-1]
 
-        if buy(symbol, quantity):
+        if buy(symbol, quantity, hist[-1]):
             FUNDS -= to_spend * 1.05
     elif symbol in holdings and (action < 0 or float(holdings[symbol]['percent_change']) > (PARAMS['MAX_PROFIT_RATIO'] - 1)):
         sell_ratio = min(0.15 + np.sqrt(-action), PARAMS['MAX_SELL_PROPORTION'])
@@ -81,7 +93,7 @@ for symbol in all_symbols:
         if (gain*0.95) / cost >= PARAMS['MIN_PROFIT_RATIO']:
             quantity = float(holdings[symbol]['quantity']) * sell_ratio
             
-            if sell(symbol, quantity):
+            if sell(symbol, quantity, hist[-1]):
                 FUNDS += gain * 0.95
         else:
             log_and_print(f"HOLD {symbol}")

@@ -24,10 +24,11 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
     costs = {}
     rois = {}
     last_trade = {}
+    net = {}
 
     for symbol in symbols:
         if symbol not in histories or datetime.now() - last_history_update > timedelta(hours=1):
-            histories[symbol] = high_low_history_with_dates(symbol, span='year')
+            histories[symbol] = high_low_history_with_dates(symbol, interval='day', span='5year')
             history_length = max(history_length, len(histories[symbol][0]))
 
         positions[symbol] = 0
@@ -36,7 +37,9 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
     available_graph = [START_FUNDS]
     available_graph_with_nonliquid = [START_FUNDS]
 
-    for i in tqdm(list(range(START, history_length))):        
+    for i in tqdm(list(range(START, history_length))): 
+        if i % 14 == 0:
+            AVAILABLE_FUNDS += 50
         available_graph_with_nonliquid.append(0)
 
         softmax_sum = 0
@@ -73,24 +76,36 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
                 costs[symbol] += to_spend
                 AVAILABLE_FUNDS -= to_spend
                 positions[symbol] += quantity
-                # print(f"BUY {quantity} {symbol} @ {hist[-1]}")
+                last_trade[symbol] = i
+                print(f"[{dates[i]}]: BUY ${to_spend} {symbol} @ {hist[-1]}")
             # Sell
             elif positions[symbol] > 0 and (action < 0 or rois[symbol] >= robin_trader.PARAMS['MAX_PROFIT_RATIO']) and i - last_trade.get(symbol, -3) > 3:
-                sell_ratio = min(min(0.15 + np.sqrt(-action), 1) if action < 0 else 1, robin_trader.PARAMS.get('MAX_SELL_PROPORTION', 1))
+                sell_ratio = 1 #min(min(0.15 + np.sqrt(-action), 1) if action < 0 else 1, robin_trader.PARAMS.get('MAX_SELL_PROPORTION', 1))
 
                 gain = sell_ratio * positions[symbol] * hist[-1] * 0.95
-                cost = sell_ratio * costs[symbol]
-
+                cost = sell_ratio * costs[symbol]                
                 if gain / cost >= robin_trader.PARAMS['MIN_PROFIT_RATIO']:
                     #print(f"SELL {positions[symbol]} {symbol} @ {hist[-1]}")
                     positions[symbol] *= 1 - sell_ratio
                     costs[symbol] *= 1 - sell_ratio
-                    AVAILABLE_FUNDS += gain                  
+                    AVAILABLE_FUNDS += gain   
+                    print(f"[{dates[i]}]: SELL {symbol} for {gain / cost} after {i - last_trade[symbol]} DAYS")
+                    last_trade[symbol] = i      
+
+                    # if gain / cost < 1:
+                    #     input()
+
+                    if symbol in net:
+                        net[symbol] += gain - cost
+                    else:
+                        net[symbol] = gain - cost
+                
             
             available_graph_with_nonliquid[-1] += positions[symbol] * hist[-1]
         available_graph.append(AVAILABLE_FUNDS)
         available_graph_with_nonliquid[-1] += AVAILABLE_FUNDS
     print(portions)
+    print(net)
     return available_graph_with_nonliquid, available_graph, dates[START:]
 
 if __name__ == "__main__":

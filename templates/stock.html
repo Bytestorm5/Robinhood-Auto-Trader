@@ -40,6 +40,13 @@
                     borderWidth: 1,
                     pointBorderWidth: 0,
                     pointRadius: 0
+                },
+                {
+                    label: 'Lower-200 Bound',
+                    data: {{ l200 | safe }},
+                    borderWidth: 1,
+                    pointBorderWidth: 0,
+                    pointRadius: 0
                 }
                 ],
                 options: {
@@ -160,5 +167,85 @@
             });
           </script>
     </div> -->
+    <table id="holdings-table" style="width: 80%; margin: auto;">
+        <tr>
+            <th class="td-symbol">Symbol</th>
+            <th class="td-number">Current Price</th>
+            <th class="td-number">Buy Price</th>
+            <th class="td-number">Quantity</th>
+            <th class="td-number">Equity</th>
+            <th class="td-number">% of Holdings</th>
+            <th class="td-number">% Change</th>
+            <th class="td-number">Net Change</th>
+        </tr>
+    </table>    
+    <div class="action-container">
+        <form class="limit-buy-action">
+            <h3>Buy w/ Limit</h3>
+            <label for="price">Max. Price</label>
+            <input type="number" for="price" step="0.01" class="price-input"><br><br>
+            <label for="quantity">Quantity</label>
+            <input for="quantity" type="number" class="quantity-input"><br><br>
+            <label>WARNING: NO CONFIRMATION MESSAGE</label><hr>
+            <button class="submit-button buy-submit" type="submit">Buy</button>
+        </form>
+        <form class="limit-sell-action">
+            <h3>Sell w/ Limit</h3>
+            <label for="price">Min. Price</label>
+            <input type="number" for="price" step="0.01" class="price-input"><br><br>
+            <label for="quantity">Quantity</label>
+            <input for="quantity" type="number" class="quantity-input"><br><br>
+            <label>WARNING: NO CONFIRMATION MESSAGE</label><hr>
+            <button class="submit-button sell-submit" type="submit">Sell</button>
+        </form>
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            //var current_holding = null
+    
+            var requestOptions = {
+              method: 'GET',
+              redirect: 'follow'
+            };
+    
+            fetch("/api/getHoldings", requestOptions)
+              .then(response => response.json())
+              .then(result => {
+                table = document.getElementById("holdings-table")           
+    
+                result.forEach(element => {
+                    if (element['symbol'] == urlParams.get('symbol')) {
+                        //current_holding = element
+                        tr = "<tr>"
+                        
+                        tr += `<td class="td-symbol"><a href="/stock?symbol=${element['symbol']}">${element['symbol']}</a></td>`
+                        tr += `<td class="td-number">$${element['price']}</td>`
+                        tr += `<td class="td-number">$${element['average_buy_price']}</td>`
+                        tr += `<td class="td-number">${element['quantity']}</td>`
+                        tr += `<td class="td-number">$${element['equity']}</td>`
+                        tr += `<td class="td-number">${element['percentage']}%</td>`
+                        tr += `<td class="td-number">${element['percent_change']}%</td>`
+                        tr += `<td class="td-number">$${element['equity_change']}</td>`
+    
+                        tr += "</tr>"
+                        table.innerHTML += tr
+
+                        Array.from(document.getElementsByClassName('price-input')).forEach(input_element => {
+                            input_element.value = element['price']
+                        })
+                        Array.from(document.getElementsByClassName('quantity-input')).forEach(input_element => {
+                            input_element.value = element['quantity']
+                        })
+                    }
+                    
+                });
+              })
+              .catch(error => console.log('error', error))
+            
+            
+
+
+        </script>
+    </div>
+
 </div>
 {% endblock %}

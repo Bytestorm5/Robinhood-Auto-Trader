@@ -68,7 +68,7 @@ def stock():
             elif action < 0:
                 radii[i-1] = 2
                 bgs[i-1] = 'red'
-        
+
     # upper_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Upper_Band'])
     # upper_band = [values[i] if i <= 39 else upper_band[i] for i in range(len(upper_band))]
 
@@ -79,11 +79,18 @@ def stock():
     
     if min(len(highs), len(lows)) < 10:
         return 0
+    
+    LOW_200_BOUND = list(data['Lows'].iloc[:i].ewm(min(len(list(data['Lows'])), 200)).mean())
 
-    upper_band = values[:10] +  list(data['Highs'].rolling(10).mean())[10:]
+    bollinger_upper = list(robin_trader.calculate_bollinger(values)['Upper_Band'])
+    
+    upper_band = list(data['Highs'].rolling(10).mean())
+    upper_len = min(len(upper_band), len(bollinger_upper))
+    upper_band = values[:20] + [min(upper_band[i], bollinger_upper[i]) * 1.005 for i in range(10, upper_len)]
+
     lower_band = values[:10] + list(data['Lows'].rolling(10).mean())[10:]
 
-    return render_template("stock.html", values=str(values), lower_band=str(lower_band), upper_band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs))
+    return render_template("stock.html", values=str(values), lower_band=str(lower_band), upper_band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs), l200=LOW_200_BOUND)
 
 @app.route("/params", methods=['GET'])
 def params(): 
