@@ -81,7 +81,7 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
                 print(f"[{dates[i]}]: BUY ${to_spend} {symbol} @ {hist[-1]}")
             # Sell
             elif positions[symbol] > 0 and (action < 0 or rois[symbol] >= robin_trader.PARAMS['MAX_PROFIT_RATIO']) and i - last_trade.get(symbol, -3) > 3:
-                sell_ratio = 1 #min(min(0.15 + np.sqrt(-action), 1) if action < 0 else 1, robin_trader.PARAMS.get('MAX_SELL_PROPORTION', 1))
+                sell_ratio = min(min(0.15 + np.sqrt(-action), 1) if action < 0 else 1, robin_trader.PARAMS.get('MAX_SELL_PROPORTION', 1))
 
                 gain = sell_ratio * positions[symbol] * hist[-1] * 0.95
                 cost = sell_ratio * costs[symbol]                
