@@ -75,20 +75,20 @@ def stock():
     # lower_band = list(robin_trader.calculate_bollinger(values, 20, 2)['Lower_Band'])
     # lower_band = [values[i] if i <= 39 else lower_band[i] for i in range(len(lower_band))]
 
-    data = pd.DataFrame({'Highs':highs, 'Lows':lows})
+    data = pd.DataFrame({'Highs':highs, 'Prices':values, 'Lows':lows})
     
     if min(len(highs), len(lows)) < 10:
         return 0
     
-    LOW_200_BOUND = list(data['Lows'].iloc[:i].ewm(min(len(list(data['Lows'])), 200)).mean())
+    LOW_200_BOUND = list(data['Prices'].ewm(span=12).mean()) #list(data['Lows'].iloc[:i].ewm(min(len(list(data['Lows'])), 200)).mean())
 
     bollinger_upper = list(robin_trader.calculate_bollinger(values)['Upper_Band'])
     
-    upper_band = list(data['Highs'].rolling(10).mean())
-    upper_len = min(len(upper_band), len(bollinger_upper))
-    upper_band = values[:20] + [min(upper_band[i], bollinger_upper[i]) * 1.005 for i in range(10, upper_len)]
+    upper_band = values[:3] + list(data['Highs'].rolling(window=3).max())[3:]
+    # upper_len = min(len(upper_band), len(bollinger_upper))
+    # upper_band = values[:20] + [min(upper_band[i], bollinger_upper[i]) * 1.005 for i in range(10, upper_len)]
 
-    lower_band = values[:10] + list(data['Lows'].rolling(10).mean())[10:]
+    lower_band = values[:3] + list(data['Lows'].rolling(window=3).min())[3:]
 
     return render_template("stock.html", values=str(values), lower_band=str(lower_band), upper_band=str(upper_band), labels=str(labels), radii=str(radii), bgs=str(bgs), l200=LOW_200_BOUND)
 

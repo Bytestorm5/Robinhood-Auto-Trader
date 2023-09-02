@@ -149,108 +149,24 @@ def determine_action(highs: list[float], lows: list[float], prices: list[float])
     rsi_rescaled = 1 - rsi[-1]
     # rsi_vals = {1: rsi_rescaled, -1: -(1 - rsi_rescaled)}
 
-    data = pd.DataFrame({'Highs':highs, 'Lows':lows})
+    data = pd.DataFrame({'Highs':highs, 'Lows':lows, 'Prices':prices})
     
-    # if min(len(highs), len(lows)) < 10:
-    #     return 0
-
-    # # Extreme sudden jumps should be caught by this
-    # bollinger_bands = calculate_bollinger(prices, window=PARAMS['BOLLINGER_WINDOW'], std_prod=PARAMS['BOLLINGER_STD_MULT'])
-    # upper_band = list(bollinger_bands['Upper_Band'])
-    # mult = 1.005
-    # if len(prices) > PARAMS['BOLLINGER_WINDOW'] and prices[-1] >= list(bollinger_bands['Upper_Band'])[-1]:
-    #     mult = 1
+    high_bound = list(data['Highs'].rolling(PARAMS['MAC_WINDOW']).max())
+    low_bound = list(data['Lows'].rolling(PARAMS['MAC_WINDOW']).min())
     
-    high_bound = list(data['Highs'].rolling(PARAMS['MAC_WINDOW']).mean())
-    low_bound = list(data['Lows'].rolling(PARAMS['MAC_WINDOW']).mean())
-    
-    # # stddev = pd.DataFrame({'Prices':prices})['Prices'].rolling(window=PARAMS['STDDEV_WINDOW']).std().mean()
-    # # stddev = 0.05 / stddev
+    rolling_average = list(data['Prices'].rolling(PARAMS['MAC_WINDOW']).mean())
+    rolling_stddev = list(data['Prices'].rolling(PARAMS['MAC_WINDOW']).std())
 
-    # # flip = -1 if stddev <= 0.005 else 1
+    high_zscore = 0.99 * (high_bound[-2] - rolling_average[-2]) / rolling_stddev[-2]
+    low_zscore = 1.01 * (low_bound[-2] - rolling_average[-2]) / rolling_stddev[-2]
 
-    if all([lows[i] > high_bound[i] * 1.005 for i in range(-PARAMS['MAC_VISION'], 0)]):
-        return 1 - rsi_rescaled
-    if all([highs[i] < low_bound[i] for i in range(-PARAMS['MAC_VISION'], 0)]):
-        return 1 - rsi_rescaled
-    # return 0
+    adjusted_high = (high_zscore * rolling_stddev[-2]) + rolling_average[-2]
+    adjusted_low = (low_zscore * rolling_stddev[-2]) + rolling_average[-2]
 
-# def determine_action(prices: list[float]) -> int: 
-    # rsi = calculate_rsi(prices, PARAMS['RSI_PERIOD'])
-    # rsi = [(datapoint / 100) for datapoint in rsi]
-
-    # rsi_rescaled = ((((rsi[-1] - 0.5)) ** 3) / 0.25) + 0.5
-
-    entry_macd = calculate_macd(prices, 50, 100, 200)
-    exit_macd = entry_macd
-
-    entry_short = list(entry_macd['MACD_Line'])
-    entry_long = list(entry_macd['Signal_Line']) 
-
-    exit_short = list(exit_macd['MACD_Line'])
-    exit_long = list(exit_macd['Signal_Line'])
-    
-    # Extreme sudden jumps should be caught by this
-    bollinger_bands = calculate_bollinger(prices, window=PARAMS['BOLLINGER_WINDOW'], std_prod=PARAMS['BOLLINGER_STD_MULT'])
-    
-    if len(prices) > PARAMS['BOLLINGER_WINDOW'] and prices[-1] >= list(bollinger_bands['Upper_Band'])[-1]:
-        return -1 * np.sqrt(1 - rsi_rescaled)
-    
-    # We don't buy on sudden drops because the stock could be experiencing an external catastrophic failure
-    # if prices[-1] < list(bollinger_bands['Lower_Band'])[-1]:
-    #     return 1 * np.sqrt(rsi_rescaled)
-
-    # Sell when Short goes under long
-    if entry_short[-1] < entry_long[-1] and entry_short[-2] > entry_long[-2]:
-        return -1 * np.sqrt(1 - rsi_rescaled)
-    
-    # Buy when Short goes over long
-    if entry_short[-1] > entry_long[-1] and entry_short[-2] < entry_long[-2]:
-        return 1 * np.sqrt(rsi_rescaled)
-
-    #Buy when MACD surpasses 0
-    # if entry_short[-1] >= 0 and entry_short[-2] <= 0 and entry_short[-1] != entry_short[-2]:
-    #     return 1 * np.sqrt(rsi_rescaled)
-    
-    # # Exit Crossover
-    # if exit_short[-2] > exit_long[-2] and exit_short[-1] < exit_long[-1]:
-    #     return -1 * np.sqrt(1 - rsi_rescaled)
-    # if exit_short[-2] < exit_long[-2] and exit_short[-1] > exit_long[-1]:
-    #     return 0.5 * np.sqrt(1 - rsi_rescaled)
-    
-    # if exit_short[-1] == exit_long[-1]:
-    #     if exit_short[-1] > 0:
-    #         return -0.25 * np.sqrt(1 - rsi_rescaled)
-    #     else:
-    #         return 0.25 * np.sqrt(rsi_rescaled)
-        
-    # #Entry Crossover
-    # if entry_short[-2] < entry_long[-2] and entry_short[-1] > entry_long[-1]:
-    #     return 1 * np.sqrt(rsi_rescaled)
-    # if entry_short[-2] > entry_long[-2] and entry_short[-1] < entry_long[-1]:
-    #     return -0.5 * np.sqrt(1 - rsi_rescaled)
-    
-    # if entry_short[-1] == entry_long[-1]:
-    #     if exit_short > 0:
-    #         return -0.25 * np.sqrt(1 - rsi_rescaled)
-    #     else:
-    #         return 0.25 * np.sqrt(rsi_rescaled)
-    
-    # short_hist_diff = list(entry_macd['Hist_Diff'])
-    # short_histogram = list(entry_macd['MACD_Histogram'])
-    # short_hist_scale = 0.2 / (1 + np.exp(-0.3 * short_histogram[-1]))
-
-    # long_hist_diff = list(entry_macd['Hist_Diff'])
-    # long_histogram = list(entry_macd['MACD_Histogram'])
-    # long_hist_scale = 0.2 / (1 + np.exp(-0.3 * long_histogram[-1]))
-
-    # # Peak
-    # if long_hist_diff[-1] < 0 and long_hist_diff[-2] > 0 and long_histogram[-1] > 0:
-    #     return -long_hist_scale * np.sqrt(1 - rsi_rescaled)
-    
-    # # Valley
-    # if short_hist_diff[-1] > 0 and short_hist_diff[-2] < 0 and short_histogram[-1] < 0:
-    #     return short_hist_scale * np.sqrt(rsi_rescaled)
+    if lows[-1] > adjusted_high:
+        return -(1 - rsi_rescaled)
+    if highs[-1] < adjusted_low:
+        return rsi_rescaled
 
     return 0
 

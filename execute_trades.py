@@ -64,7 +64,7 @@ symbols = PARAMS['STOCK_POOL'].split()
 
 all_symbols = list(set(symbols + list(holdings.keys())))
 
-softmax_sum = [np.exp(float(holdings.get(symbol, {'percent_change':0})['percent_change'])) for symbol in all_symbols]
+softmax_sum = sum([np.exp(float(holdings.get(symbol, {'percent_change':0})['percent_change'])) for symbol in all_symbols])
 portions = {}
 for symbol in all_symbols:
     portions[symbol] = np.exp(float(holdings.get(symbol, {'percent_change':0})['percent_change'])) / softmax_sum

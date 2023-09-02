@@ -32,21 +32,19 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
             history_length = max(history_length, len(histories[symbol][0]))
 
         positions[symbol] = 0
-        costs[symbol] = 0
+        costs[symbol] = 0   
 
     available_graph = [START_FUNDS]
     available_graph_with_nonliquid = [START_FUNDS]
 
     for i in tqdm(list(range(START, history_length))): 
-        if i % 14 == 0:
-            AVAILABLE_FUNDS += 50
         available_graph_with_nonliquid.append(0)
 
         softmax_sum = 0
 
         for symbol in symbols:
             hist, highs, lows, dates = histories[symbol]
-            hist = hist[:i]
+            hist = hist[:i]            
 
             gain = positions[symbol] * hist[-1]
             cost = costs[symbol]
@@ -65,6 +63,9 @@ def sim_trades(START_FUNDS, custom_symbols: list[str] | None = None, flip = Fals
             action = determine_action(highs, lows, hist)        
             if flip:
                 action *= -1    
+
+            while len(dates) < history_length:
+                dates.append(str(datetime.now()))
 
             BUY_AMOUNT = AVAILABLE_FUNDS * portions[symbol]
 
